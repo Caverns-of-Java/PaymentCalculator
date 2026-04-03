@@ -460,17 +460,61 @@ h1 {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.88);
   padding: 0.85rem;
-}
-
-.bill-card h3 {
-  margin-bottom: 0.4rem;
-  font-size: 1.1rem;
-}
-
-.bill-meta {
   display: grid;
-  gap: var(--gap-xs);
+  gap: 0.55rem;
+}
+
+.bill-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--gap-sm);
+}
+
+.bill-what-for,
+.bill-due-date,
+.bill-total,
+.bill-share {
+  margin: 0;
+}
+
+.bill-what-for {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.bill-due-date {
+  font-size: 0.88rem;
+  white-space: nowrap;
   color: var(--muted);
+}
+
+.bill-total {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.35rem;
+  color: var(--text);
+}
+
+.bill-shares {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.bill-share {
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.bill-share-ken {
+  background: linear-gradient(180deg, rgba(223, 243, 254, 0.8), rgba(255, 255, 255, 0.7));
+}
+
+.bill-share-ethan {
+  background: linear-gradient(180deg, rgba(255, 229, 221, 0.82), rgba(255, 255, 255, 0.7));
 }
 
 .empty-state {
@@ -552,5 +596,10 @@ h1 {
 
   .hero-actions {
     justify-items: stretch;
+  }
+
+  .bill-card-top {
+    align-items: start;
+    flex-wrap: wrap;
   }
 }

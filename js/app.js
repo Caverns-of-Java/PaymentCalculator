@@ -129,26 +129,35 @@ function createBillCard(bill) {
   const article = document.createElement("article");
   article.className = "bill-card";
 
-  const title = document.createElement("h3");
-  title.textContent = bill.whatFor || "Untitled bill";
+  const topRow = document.createElement("div");
+  topRow.className = "bill-card-top";
 
-  const meta = document.createElement("div");
-  meta.className = "bill-meta";
+  const whatFor = document.createElement("p");
+  whatFor.className = "bill-what-for";
+  whatFor.textContent = `What For: ${bill.whatFor || "Untitled bill"}`;
 
-  const totalLine = document.createElement("p");
-  totalLine.textContent = `Total: ${formatCurrency(bill.totalAmount)}`;
+  const dueDate = document.createElement("p");
+  dueDate.className = "bill-due-date";
+  dueDate.textContent = `Due: ${formatDate(bill.dueDate)}`;
 
-  const kenLine = document.createElement("p");
-  kenLine.textContent = `Ken: ${formatCurrency(bill.kenShare)}`;
+  const total = document.createElement("p");
+  total.className = "bill-total";
+  total.textContent = formatCurrency(bill.totalAmount);
 
-  const ethanLine = document.createElement("p");
-  ethanLine.textContent = `Ethan: ${formatCurrency(bill.ethanShare)}`;
+  const shares = document.createElement("div");
+  shares.className = "bill-shares";
 
-  const dueLine = document.createElement("p");
-  dueLine.textContent = `Due: ${formatDate(bill.dueDate)}`;
+  const kenShare = document.createElement("p");
+  kenShare.className = "bill-share bill-share-ken";
+  kenShare.textContent = `Ken: ${formatCurrency(bill.kenShare)}`;
 
-  meta.append(totalLine, kenLine, ethanLine, dueLine);
-  article.append(title, meta);
+  const ethanShare = document.createElement("p");
+  ethanShare.className = "bill-share bill-share-ethan";
+  ethanShare.textContent = `Ethan: ${formatCurrency(bill.ethanShare)}`;
+
+  topRow.append(whatFor, dueDate);
+  shares.append(kenShare, ethanShare);
+  article.append(topRow, total, shares);
   return article;
 }
 
