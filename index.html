@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Calculator</title>
+  <meta
+    name="description"
+    content="Track shared payments, personal expenses, and split household bills."
+  >
+  <meta name="theme-color" content="#1d2433">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <h1>Payment Calculator</h1>
+      </div>
+      <div class="hero-actions">
+        <nav class="view-nav" aria-label="Primary navigation">
+          <button class="nav-button is-active" type="button" data-view-button="summary">Summary</button>
+          <button class="nav-button" type="button" data-view-button="bills">Bills</button>
+        </nav>
+        <button class="secondary-button" type="button" id="refreshButton">Refresh Data</button>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <section class="status-banner" id="statusBanner" hidden></section>
+
+      <section class="view-panel is-active" id="summaryView" data-view="summary" aria-labelledby="summaryHeading">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Overview</p>
+            <h2 id="summaryHeading">Current split</h2>
+          </div>
+          <p class="timestamp">Last updated: <span id="updatedValue">Not loaded</span></p>
+        </div>
+
+        <div class="summary-layout">
+          <article class="stat-card stat-card-primary accent-gold">
+            <div class="stat-card-title-row">
+              <p>Total owing</p>
+              <button
+                class="icon-button"
+                type="button"
+                id="editTotalOwingButton"
+                aria-label="Edit total owing"
+                title="Edit total owing"
+              >
+                &#9998;
+              </button>
+            </div>
+            <strong id="totalValue">--</strong>
+          </article>
+
+          <div class="stats-row stats-row-shares">
+            <article class="stat-card accent-blue">
+              <p>Ken share</p>
+              <strong id="kenShareValue">--</strong>
+            </article>
+            <article class="stat-card accent-coral">
+              <p>Ethan share</p>
+              <strong id="ethanShareValue">--</strong>
+            </article>
+          </div>
+
+          <div class="stats-row stats-row-expenses">
+            <article class="stat-card accent-green">
+              <p>Ken-only expenses</p>
+              <strong id="kenExpensesValue">--</strong>
+            </article>
+            <article class="stat-card accent-plum">
+              <p>Ethan-only expenses</p>
+              <strong id="ethanExpensesValue">--</strong>
+            </article>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel-card">
+            <div class="panel-header">
+              <div>
+                <p class="section-kicker">New entry</p>
+                <h3>Add a personal expense</h3>
+              </div>
+              <p class="panel-note">This writes directly to the matching spreadsheet tab.</p>
+            </div>
+
+            <form id="expenseForm" class="stack-form" novalidate>
+              <label class="field">
+                <span>Person</span>
+                <select id="expenseType" name="type" required>
+                  <option value="ken">Ken</option>
+                  <option value="ethan">Ethan</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Amount</span>
+                <input id="expenseAmount" name="amount" type="text" inputmode="decimal" placeholder="12.50 or 30+2" required>
+              </label>
+
+              <button class="primary-button" type="submit" id="expenseSubmitButton">Save expense</button>
+            </form>
+          </section>
+
+          <section class="panel-card expense-lists-panel" aria-live="polite">
+            <div class="panel-header">
+              <div>
+                <h3>Personal expenses</h3>
+              </div>
+            </div>
+
+            <div class="expense-lists-row">
+              <section class="expense-list-card">
+                <h4>Ken expenses</h4>
+                <p class="expense-empty" id="kenExpenseEntriesEmpty">No entries yet.</p>
+                <ul class="expense-list" id="kenExpenseEntries"></ul>
+              </section>
+              <section class="expense-list-card">
+                <h4>Ethan expenses</h4>
+                <p class="expense-empty" id="ethanExpenseEntriesEmpty">No entries yet.</p>
+                <ul class="expense-list" id="ethanExpenseEntries"></ul>
+              </section>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view-panel" id="billsView" data-view="bills" aria-labelledby="billsHeading">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Bills</p>
+            <h2 id="billsHeading">Shared bills</h2>
+          </div>
+          <p class="timestamp">Sorted by nearest due date first.</p>
+        </div>
+
+        <div class="content-grid bills-grid">
+          <section class="panel-card bill-list-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-kicker">Upcoming</p>
+                <h3>Bill list</h3>
+              </div>
+            </div>
+
+            <div id="billsEmptyState" class="empty-state" hidden>
+              No bills yet. Add the first one from the form.
+            </div>
+            <div id="billsContainer" class="bill-list" aria-live="polite"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <div>
+                <p class="section-kicker">Add bill</p>
+                <h3>Create a split bill</h3>
+              </div>
+            </div>
+
+            <form id="billForm" class="stack-form" novalidate>
+              <label class="field">
+                <span>What for</span>
+                <input id="billWhatFor" name="whatFor" type="text" maxlength="120" placeholder="Electricity" required>
+              </label>
+
+              <label class="field">
+                <span>Total amount</span>
+                <input id="billAmount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="120.00" required>
+              </label>
+
+              <label class="field">
+                <span>Due date</span>
+                <input id="billDueDate" name="dueDate" type="date" required>
+              </label>
+
+              <button class="primary-button" type="submit" id="billSubmitButton">Save bill</button>
+            </form>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-overlay" id="totalOwingModal" hidden>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="totalOwingModalTitle">
+        <div class="panel-header">
+          <div>
+            <h3 id="totalOwingModalTitle">Update total owing</h3>
+          </div>
+          <button class="icon-button" type="button" id="closeTotalOwingModalButton" aria-label="Close total owing modal">&times;</button>
+        </div>
+
+        <form id="totalOwingForm" class="stack-form" novalidate>
+          <label class="field">
+            <span>Total owing amount</span>
+            <input id="totalOwingAmount" name="amount" type="text" inputmode="decimal" placeholder="4000.00 or 3500+500" required>
+          </label>
+
+          <button class="primary-button" type="submit" id="totalOwingSubmitButton">Update total owing</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
