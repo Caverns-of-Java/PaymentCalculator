@@ -433,7 +433,7 @@ h1 {
   border-color: rgba(124, 196, 239, 0.8);
 }
 
-#expenseAmount::placeholder {
+::placeholder {
   color: rgba(95, 100, 114, 0.62);
   font-style: italic;
   font-size: smaller;
