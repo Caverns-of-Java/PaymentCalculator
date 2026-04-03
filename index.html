@@ -189,6 +189,18 @@
               <button class="primary-button" type="submit" id="billSubmitButton">Save bill</button>
             </form>
           </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <div>
+                <p class="section-kicker">History</p>
+                <h3>Last 5 bills paid</h3>
+              </div>
+            </div>
+
+            <p id="paidBillsEmptyState" class="empty-state">No paid bills yet.</p>
+            <ul id="paidBillsContainer" class="paid-bills-list" aria-live="polite"></ul>
+          </section>
         </div>
       </section>
     </main>
@@ -210,6 +222,24 @@
 
           <button class="primary-button" type="submit" id="totalOwingSubmitButton">Update total owing</button>
         </form>
+      </section>
+    </div>
+
+    <div class="modal-overlay" id="billPaidModal" hidden>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="billPaidModalTitle">
+        <div class="panel-header">
+          <div>
+            <h3 id="billPaidModalTitle">Mark bill as paid</h3>
+          </div>
+          <button class="icon-button" type="button" id="closeBillPaidModalButton" aria-label="Close mark bill paid modal">&times;</button>
+        </div>
+
+        <p id="billPaidPromptText" class="modal-message"></p>
+
+        <div class="modal-actions">
+          <button class="secondary-button" type="button" id="cancelBillPaidButton">Not yet</button>
+          <button class="primary-button" type="button" id="confirmBillPaidButton">Mark as paid</button>
+        </div>
       </section>
     </div>
   </div>

@@ -1,9 +1,10 @@
-import { createBill, createExpense, fetchBills, fetchExpenseEntries, fetchSummary, updateTotalOwing } from "./api.js";
+import { createBill, createExpense, fetchBills, fetchExpenseEntries, fetchSummary, markBillPaid, updateTotalOwing } from "./api.js";
 import { isApiConfigured } from "./config.js";
 import { formatCurrency, formatDate, formatDateTime, normalizeAmount, normalizeNonNegativeAmount, sortBillsByDueDate } from "./formatters.js";
 import { state } from "./state.js";
 
 let deferredInstallPrompt = null;
+let pendingBillPayment = null;
 
 const elements = {
   statusBanner: document.querySelector("#statusBanner"),
@@ -22,6 +23,11 @@ const elements = {
   totalOwingForm: document.querySelector("#totalOwingForm"),
   totalOwingAmount: document.querySelector("#totalOwingAmount"),
   totalOwingSubmitButton: document.querySelector("#totalOwingSubmitButton"),
+  billPaidModal: document.querySelector("#billPaidModal"),
+  closeBillPaidModalButton: document.querySelector("#closeBillPaidModalButton"),
+  billPaidPromptText: document.querySelector("#billPaidPromptText"),
+  cancelBillPaidButton: document.querySelector("#cancelBillPaidButton"),
+  confirmBillPaidButton: document.querySelector("#confirmBillPaidButton"),
   kenExpenseEntries: document.querySelector("#kenExpenseEntries"),
   ethanExpenseEntries: document.querySelector("#ethanExpenseEntries"),
   kenExpenseEntriesEmpty: document.querySelector("#kenExpenseEntriesEmpty"),
@@ -30,6 +36,8 @@ const elements = {
   billSubmitButton: document.querySelector("#billSubmitButton"),
   billsContainer: document.querySelector("#billsContainer"),
   billsEmptyState: document.querySelector("#billsEmptyState"),
+  paidBillsContainer: document.querySelector("#paidBillsContainer"),
+  paidBillsEmptyState: document.querySelector("#paidBillsEmptyState"),
   viewButtons: [...document.querySelectorAll("[data-view-button]")],
   viewPanels: [...document.querySelectorAll("[data-view]")],
 };
@@ -77,6 +85,37 @@ function openTotalOwingModal() {
 
 function closeTotalOwingModal() {
   elements.totalOwingModal.hidden = true;
+}
+
+function openBillPaidModal(billId, whatFor) {
+  if (!elements.billPaidModal || !elements.billPaidPromptText || !elements.confirmBillPaidButton) {
+    const confirmed = window.confirm(`Mark \"${whatFor || "this bill"}\" as paid?`);
+
+    if (confirmed) {
+      void handleMarkBillPaid(billId);
+    }
+
+    return;
+  }
+
+  pendingBillPayment = {
+    id: billId,
+    whatFor: whatFor || "this bill",
+  };
+
+  elements.billPaidPromptText.textContent = `Mark \"${pendingBillPayment.whatFor}\" as paid?`;
+  elements.billPaidModal.hidden = false;
+  elements.confirmBillPaidButton.focus();
+}
+
+function closeBillPaidModal() {
+  if (!elements.billPaidModal) {
+    pendingBillPayment = null;
+    return;
+  }
+
+  elements.billPaidModal.hidden = true;
+  pendingBillPayment = null;
 }
 
 function renderSummary() {
@@ -128,6 +167,13 @@ function renderExpenseEntries() {
 function createBillCard(bill) {
   const article = document.createElement("article");
   article.className = "bill-card";
+  article.setAttribute("role", "button");
+  article.tabIndex = 0;
+  article.setAttribute("aria-label", `Mark ${bill.whatFor || "this bill"} as paid`);
+
+  if (state.submittingBillPayment && state.payingBillId === bill.id) {
+    article.classList.add("is-marking");
+  }
 
   const topRow = document.createElement("div");
   topRow.className = "bill-card-top";
@@ -155,22 +201,126 @@ function createBillCard(bill) {
   ethanShare.className = "bill-share bill-share-ethan";
   ethanShare.textContent = `Ethan: ${formatCurrency(bill.ethanShare)}`;
 
+  const tapHint = document.createElement("p");
+  tapHint.className = "bill-tap-hint";
+  tapHint.textContent = state.submittingBillPayment && state.payingBillId === bill.id
+    ? "Marking as paid..."
+    : "Tap to mark as paid";
+
+  article.addEventListener("click", () => {
+    openBillPaidModal(bill.id, bill.whatFor);
+  });
+
+  article.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openBillPaidModal(bill.id, bill.whatFor);
+    }
+  });
+
   topRow.append(whatFor, dueDate);
   shares.append(kenShare, ethanShare);
-  article.append(topRow, total, shares);
+  article.append(topRow, total, shares, tapHint);
   return article;
+}
+
+function createPaidBillListItem(bill) {
+  const item = document.createElement("li");
+  item.className = "paid-bills-item";
+
+  const lineOne = document.createElement("p");
+  lineOne.className = "paid-bills-line paid-bills-title";
+  lineOne.textContent = `${bill.whatFor || "Untitled bill"} - ${formatCurrency(bill.totalAmount)}`;
+
+  const lineTwo = document.createElement("p");
+  lineTwo.className = "paid-bills-line paid-bills-meta";
+  lineTwo.textContent = `Paid ${formatDate(bill.paidAt)} | Due ${formatDate(bill.dueDate)}`;
+
+  item.append(lineOne, lineTwo);
+  return item;
 }
 
 function renderBills() {
   elements.billsContainer.replaceChildren();
+  elements.paidBillsContainer.replaceChildren();
 
-  const sortedBills = sortBillsByDueDate(state.bills);
+  const upcomingBills = sortBillsByDueDate(state.bills.filter((bill) => !bill.isPaid));
+  const paidBills = [...state.bills]
+    .filter((bill) => bill.isPaid)
+    .sort((left, right) => {
+      const leftTime = new Date(left.paidAt).getTime();
+      const rightTime = new Date(right.paidAt).getTime();
 
-  elements.billsEmptyState.hidden = sortedBills.length > 0;
+      if (Number.isNaN(leftTime) && Number.isNaN(rightTime)) {
+        return 0;
+      }
 
-  sortedBills.forEach((bill) => {
+      if (Number.isNaN(leftTime)) {
+        return 1;
+      }
+
+      if (Number.isNaN(rightTime)) {
+        return -1;
+      }
+
+      return rightTime - leftTime;
+    })
+    .slice(0, 5);
+
+  elements.billsEmptyState.hidden = upcomingBills.length > 0;
+  elements.paidBillsEmptyState.hidden = paidBills.length > 0;
+
+  upcomingBills.forEach((bill) => {
     elements.billsContainer.appendChild(createBillCard(bill));
   });
+
+  paidBills.forEach((bill) => {
+    elements.paidBillsContainer.appendChild(createPaidBillListItem(bill));
+  });
+}
+
+async function handleMarkBillPaid(billId) {
+  if (state.submittingBillPayment) {
+    return;
+  }
+
+  state.submittingBillPayment = true;
+  state.payingBillId = billId;
+  renderBills();
+
+  if (elements.confirmBillPaidButton) {
+    setButtonLoading(elements.confirmBillPaidButton, true, "Marking...", "Mark as paid");
+  }
+
+  try {
+    await markBillPaid({
+      type: "bill_paid",
+      id: billId,
+    });
+
+    setStatus("Bill marked as paid.", "success");
+    await loadBillsList();
+    closeBillPaidModal();
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    if (elements.confirmBillPaidButton) {
+      setButtonLoading(elements.confirmBillPaidButton, false, "Marking...", "Mark as paid");
+    }
+
+    state.submittingBillPayment = false;
+    state.payingBillId = null;
+    renderBills();
+  }
+}
+
+async function handleConfirmBillPaid() {
+  if (!pendingBillPayment) {
+    closeBillPaidModal();
+    return;
+  }
+
+  await handleMarkBillPaid(pendingBillPayment.id);
 }
 
 async function loadSummary({ showSuccessMessage = false } = {}) {
@@ -346,11 +496,37 @@ function bindEvents() {
     }
   });
 
+  if (elements.billPaidModal) {
+    elements.billPaidModal.addEventListener("click", (event) => {
+      if (event.target === elements.billPaidModal) {
+        closeBillPaidModal();
+      }
+    });
+  }
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !elements.totalOwingModal.hidden) {
       closeTotalOwingModal();
     }
+
+    if (elements.billPaidModal && event.key === "Escape" && !elements.billPaidModal.hidden) {
+      closeBillPaidModal();
+    }
   });
+
+  if (elements.closeBillPaidModalButton) {
+    elements.closeBillPaidModalButton.addEventListener("click", closeBillPaidModal);
+  }
+
+  if (elements.cancelBillPaidButton) {
+    elements.cancelBillPaidButton.addEventListener("click", closeBillPaidModal);
+  }
+
+  if (elements.confirmBillPaidButton) {
+    elements.confirmBillPaidButton.addEventListener("click", () => {
+      void handleConfirmBillPaid();
+    });
+  }
 
   elements.totalOwingForm.addEventListener("submit", (event) => {
     void handleTotalOwingSubmit(event);

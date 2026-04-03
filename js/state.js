@@ -11,4 +11,6 @@ export const state = {
   loadingBills: false,
   submittingExpense: false,
   submittingBill: false,
+  submittingBillPayment: false,
+  payingBillId: null,
 };

@@ -104,4 +104,8 @@ export function createBill(payload) {
   return request({ method: "POST", payload });
 }
 
+export function markBillPaid(payload) {
+  return request({ method: "POST", payload });
+}
+
 export { ApiError };
