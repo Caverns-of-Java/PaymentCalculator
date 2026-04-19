@@ -108,4 +108,8 @@ export function markBillPaid(payload) {
   return request({ method: "POST", payload });
 }
 
+export function clearExpensePeriod(payload) {
+  return request({ method: "POST", payload });
+}
+
 export { ApiError };

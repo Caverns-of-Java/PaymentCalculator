@@ -1,4 +1,4 @@
-import { createBill, createExpense, fetchBills, fetchExpenseEntries, fetchSummary, markBillPaid, updateTotalOwing } from "./api.js";
+import { clearExpensePeriod, createBill, createExpense, fetchBills, fetchExpenseEntries, fetchSummary, markBillPaid, updateTotalOwing } from "./api.js";
 import { isApiConfigured } from "./config.js";
 import { formatCurrency, formatDate, formatDateTime, normalizeAmount, normalizeNonNegativeAmount, sortBillsByDueDate } from "./formatters.js";
 import { state } from "./state.js";
@@ -32,6 +32,7 @@ const elements = {
   ethanExpenseEntries: document.querySelector("#ethanExpenseEntries"),
   kenExpenseEntriesEmpty: document.querySelector("#kenExpenseEntriesEmpty"),
   ethanExpenseEntriesEmpty: document.querySelector("#ethanExpenseEntriesEmpty"),
+  clearExpensesButton: document.querySelector("#clearExpensesButton"),
   billForm: document.querySelector("#billForm"),
   billSubmitButton: document.querySelector("#billSubmitButton"),
   billsContainer: document.querySelector("#billsContainer"),
@@ -404,6 +405,35 @@ async function handleExpenseSubmit(event) {
   }
 }
 
+async function handleClearExpensePeriod() {
+  if (state.submittingExpenseClear) {
+    return;
+  }
+
+  const confirmed = window.confirm("Clear all visible expenses for a new period? Existing rows will be marked as hidden in Google Sheets and can still be audited there.");
+
+  if (!confirmed) {
+    return;
+  }
+
+  state.submittingExpenseClear = true;
+  setButtonLoading(elements.clearExpensesButton, true, "Clearing...", "Clear for new period");
+
+  try {
+    await clearExpensePeriod({
+      type: "clear_expenses",
+    });
+
+    setStatus("A new payment period is ready. Previous expenses are now hidden.", "success");
+    await Promise.all([loadSummary(), loadExpenseEntries()]);
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    state.submittingExpenseClear = false;
+    setButtonLoading(elements.clearExpensesButton, false, "Clearing...", "Clear for new period");
+  }
+}
+
 async function handleBillSubmit(event) {
   event.preventDefault();
 
@@ -486,6 +516,12 @@ function bindEvents() {
   elements.expenseForm.addEventListener("submit", (event) => {
     void handleExpenseSubmit(event);
   });
+
+  if (elements.clearExpensesButton) {
+    elements.clearExpensesButton.addEventListener("click", () => {
+      void handleClearExpensePeriod();
+    });
+  }
 
   elements.editTotalOwingButton.addEventListener("click", openTotalOwingModal);
   elements.closeTotalOwingModalButton.addEventListener("click", closeTotalOwingModal);

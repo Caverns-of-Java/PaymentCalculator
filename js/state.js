@@ -10,6 +10,7 @@ export const state = {
   loadingExpenseEntries: false,
   loadingBills: false,
   submittingExpense: false,
+  submittingExpenseClear: false,
   submittingBill: false,
   submittingBillPayment: false,
   payingBillId: null,

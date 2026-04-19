@@ -25,21 +25,23 @@ Use row 1 for headers and row 2 for live values.
 
 ### Ken_Only
 
-| A | B | C |
-|---|---|---|
-| Timestamp | Amount | Summary |
+| A | B | C | D |
+|---|---|---|---|
+| Timestamp | Amount | Summary | Hide |
 
 ### Ethan_Only
 
-| A | B | C |
-|---|---|---|
-| Timestamp | Amount | Summary |
+| A | B | C | D |
+|---|---|---|---|
+| Timestamp | Amount | Summary | Hide |
 
 For both personal-expense sheets, keep column C reserved for the sheet summary formula.
 
 - `C1` should be `Summary`
 - `C2` should contain the formula `=SUM(B2:B)`
+- `D1` should be `Hide`
 - New expense rows are appended with values in columns A and B only
+- When "Clear for new period" is used, existing rows are marked with `hide` in column D and excluded from app totals/lists
 
 ### Bills
 
